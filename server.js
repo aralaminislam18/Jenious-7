@@ -51,6 +51,7 @@ app.post("/wake-device", async (req, res) => {
         console.log("Player ID :", playerId);
         console.log("Command   :", command);
 
+        // ✅ FIXED: Proper notification payload with visible content
         const body = {
             app_id: process.env.ONESIGNAL_APP_ID,
 
@@ -58,21 +59,37 @@ app.post("/wake-device", async (req, res) => {
 
             priority: 10,
 
+            // ✅ Visible content (user দেখবে)
             contents: {
-                en: " "
+                en: "🛡️ Jenious Guard Wake Command"
             },
 
             headings: {
-                en: " "
+                en: "Jenious Guard"
             },
 
-            android_visibility: 0,
+            // ✅ High priority — foreground/background উভয়েই deliver হবে
+            android_priority: "high",
+            
+            // ✅ Heads up notification দেখাবে (notification panel এ)
+            android_visibility: 1,
 
+            // ✅ Data payload handler এ যাবে (command identify করার জন্য)
             data: {
                 command: command,
                 wake: true,
                 timestamp: Date.now()
-            }
+            },
+
+            // ✅ BigText format (বেশি content দেখাবে)
+            big_text: {
+                en: `Device wake command received. Command: ${command}`
+            },
+
+            // ✅ Custom sound + vibration + LED (visual feedback)
+            android_sound: "default",
+            android_led_color: "FF0000FF",  // Blue LED
+            android_vibrate: [100, 200, 100]
         };
 
         console.log("Request Body:");
