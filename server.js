@@ -1,9 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 
+const fetch = (...args) =>
+    import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
 const app = express();
 
-// CORS
+// =========================
+// Middleware
+// =========================
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
@@ -14,30 +19,37 @@ app.options("*", cors());
 
 app.use(express.json());
 
+// =========================
+// Health Check
+// =========================
 app.get("/", (req, res) => {
     res.json({
         success: true,
-        message: "Jenious Guard Backend Running ✅"
+        message: "Jenious Guard Backend Running ✅",
+        timestamp: new Date().toISOString()
     });
 });
 
+// =========================
+// Wake Device API
+// =========================
 app.post("/wake-device", async (req, res) => {
-
-    const { playerId, command = "wake" } = req.body;
-
-    if (!playerId) {
-        return res.status(400).json({
-            success: false,
-            error: "playerId required"
-        });
-    }
 
     try {
 
-        console.log("======================================");
+        const { playerId, command = "wake" } = req.body;
+
+        if (!playerId) {
+            return res.status(400).json({
+                success: false,
+                error: "playerId required"
+            });
+        }
+
+        console.log("\n==============================");
         console.log("Incoming Wake Request");
-        console.log("Subscription ID:", playerId);
-        console.log("Command:", command);
+        console.log("Player ID :", playerId);
+        console.log("Command   :", command);
 
         const body = {
             app_id: process.env.ONESIGNAL_APP_ID,
@@ -57,10 +69,13 @@ app.post("/wake-device", async (req, res) => {
             android_visibility: 0,
 
             data: {
-                command: command
+                command: command,
+                wake: true,
+                timestamp: Date.now()
             }
         };
 
+        console.log("Request Body:");
         console.log(JSON.stringify(body, null, 2));
 
         const response = await fetch(
@@ -69,7 +84,7 @@ app.post("/wake-device", async (req, res) => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Basic ${process.env.ONESIGNAL_REST_KEY}`
+                    "Authorization": `Basic ${process.env.ONESIGNAL_REST_KEY}`
                 },
                 body: JSON.stringify(body)
             }
@@ -77,8 +92,11 @@ app.post("/wake-device", async (req, res) => {
 
         const result = await response.json();
 
-        console.log("HTTP Status:", response.status);
+        console.log("------------------------------");
+        console.log("HTTP Status :", response.status);
+        console.log("Response:");
         console.log(JSON.stringify(result, null, 2));
+        console.log("==============================\n");
 
         if (!response.ok) {
             return res.status(response.status).json({
@@ -87,32 +105,51 @@ app.post("/wake-device", async (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             response: result
         });
 
-    } catch (e) {
+    } catch (err) {
 
-        console.error(e);
+        console.error("Wake Device Error:");
+        console.error(err);
 
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            error: e.message
+            error: err.message
         });
+
     }
+
 });
 
+// =========================
+// 404
+// =========================
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: "API Not Found"
+    });
+});
+
+// =========================
+// Start Server
+// =========================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
+
     console.log("======================================");
     console.log("Jenious Guard Backend Started");
     console.log("Port:", PORT);
-    console.log("App ID:", process.env.ONESIGNAL_APP_ID);
-    console.log(
-        "REST KEY:",
-        process.env.ONESIGNAL_REST_KEY ? "Loaded ✅" : "Missing ❌"
-    );
+    console.log("App ID:",
+        process.env.ONESIGNAL_APP_ID ? "Loaded ✅" : "Missing ❌");
+
+    console.log("REST KEY:",
+        process.env.ONESIGNAL_REST_KEY ? "Loaded ✅" : "Missing ❌");
+
     console.log("======================================");
+
 });
