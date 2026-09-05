@@ -1,5 +1,16 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
+
+// CORS
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.options("*", cors());
 
 app.use(express.json());
 
@@ -50,7 +61,6 @@ app.post("/wake-device", async (req, res) => {
             }
         };
 
-        console.log("Request Body:");
         console.log(JSON.stringify(body, null, 2));
 
         const response = await fetch(
@@ -59,8 +69,7 @@ app.post("/wake-device", async (req, res) => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization":
-                        `Basic ${process.env.ONESIGNAL_REST_KEY}`
+                    Authorization: `Basic ${process.env.ONESIGNAL_REST_KEY}`
                 },
                 body: JSON.stringify(body)
             }
@@ -68,11 +77,8 @@ app.post("/wake-device", async (req, res) => {
 
         const result = await response.json();
 
-        console.log("--------------------------------------");
         console.log("HTTP Status:", response.status);
-        console.log("OneSignal Response:");
         console.log(JSON.stringify(result, null, 2));
-        console.log("======================================");
 
         if (!response.ok) {
             return res.status(response.status).json({
@@ -88,7 +94,6 @@ app.post("/wake-device", async (req, res) => {
 
     } catch (e) {
 
-        console.error("Wake Error");
         console.error(e);
 
         res.status(500).json({
@@ -96,7 +101,6 @@ app.post("/wake-device", async (req, res) => {
             error: e.message
         });
     }
-
 });
 
 const PORT = process.env.PORT || 3000;
@@ -108,9 +112,7 @@ app.listen(PORT, () => {
     console.log("App ID:", process.env.ONESIGNAL_APP_ID);
     console.log(
         "REST KEY:",
-        process.env.ONESIGNAL_REST_KEY
-            ? "Loaded ✅"
-            : "Missing ❌"
+        process.env.ONESIGNAL_REST_KEY ? "Loaded ✅" : "Missing ❌"
     );
     console.log("======================================");
 });
